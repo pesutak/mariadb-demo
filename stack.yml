@@ -1,0 +1,82 @@
+version: "3.6"
+
+services:
+
+  db:
+    image: mariadb:10.4.12
+    deploy:
+      replicas: 1
+    restart: always
+    ports: 
+      - 3060:3306
+    networks: 
+      - db-test-lan
+    environment: 
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
+      MYSQL_DATABASE: test
+    volumes:
+      - db-data:/var/lib/mysql
+      - ./conf/seed.sql:/docker-entrypoint-initdb.d/seed.sql
+    configs:
+      - source: db-config-v1
+        target: /etc/mysql/my.cnf
+    secrets:
+      - db_root_password
+      - source: ca-cert
+        target: /etc/mysql/ca-cert.pem
+      - source: server-key
+        target: /etc/mysql/server-key.pem
+      - source: server-cert
+        target: /etc/mysql/server-cert.pem
+      - source: keyfile-key
+        target: /etc/mysql/encryption/keyfile.key
+      - source: keyfile-enc
+        target: /etc/mysql/encryption/keyfile.enc
+
+  client:
+    depends_on: 
+      - db
+    image: mariadb:10.4.12
+    restart: always
+    networks: 
+      - db-test-lan
+    environment: 
+      - MYSQL_ALLOW_EMPTY_PASSWORD=true
+    volumes:
+      - ./conf/my-client.cnf:/etc/mysql/my.cnf
+    secrets:
+      - source: ca-cert
+        target: /etc/ssl/client/ca-cert.pem
+      - source: client-key
+        target: /etc/ssl/client/client-key.pem
+      - source: client-cert
+        target: /etc/ssl/client/client-cert.pem
+
+volumes:
+  db-data:
+
+networks: 
+  db-test-lan:
+    name: db-test-lan
+
+configs:
+  db-config-v1:
+    file: ./conf/my-server.cnf
+
+secrets:
+  db_root_password:
+    file: ./conf/db_root_password.txt
+  ca-cert:
+    file: ./certs/ca-cert.pem
+  server-cert:
+    file: ./certs/server-cert.pem 
+  server-key:
+     file: ./certs/server-key.pem
+  client-cert:
+    file: ./certs/client-cert.pem
+  client-key:
+    file: ./certs/client-key.pem
+  keyfile-enc:
+    file: ./encryption/keyfile.enc
+  keyfile-key:
+    file: ./encryption/keyfile.key
