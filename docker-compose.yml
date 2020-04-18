@@ -6,7 +6,7 @@ services:
     image: mariadb:10.4.12
     restart: always
     ports: 
-      - 3060:3306
+      - 3306:3306
     networks: 
       - testlan
     environment: 
